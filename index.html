@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>NetFlix 影视</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--red:#e50914;--bg:#141414;--bg2:#1a1a1a;--gray:#808080;--gray-l:#b3b3b3;--white:#fff;--r:4px;--t:.3s ease}
+html{scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--white);overflow-x:hidden;min-height:100vh}
+a{color:inherit;text-decoration:none}ul{list-style:none}button{cursor:pointer;border:none;background:none;color:inherit;font:inherit}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#555;border-radius:3px}input{outline:none}
+
+.navbar{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:56px;background:linear-gradient(180deg,rgba(0,0,0,.92),transparent);transition:background var(--t)}
+.navbar.solid{background:rgba(20,20,20,.98)}
+.nav-left{display:flex;align-items:center;gap:20px}
+.logo{font-size:22px;font-weight:900;color:var(--red);letter-spacing:-1px;cursor:pointer}
+.nav-right{display:flex;align-items:center;gap:10px}
+.search-box{display:flex;align-items:center;border:1px solid transparent;border-radius:4px;overflow:hidden;transition:all var(--t)}
+.search-box.open{background:rgba(0,0,0,.75);border-color:rgba(255,255,255,.5)}
+.search-icon{display:flex;align-items:center;justify-content:center;width:36px;height:36px;color:var(--white)}
+.search-input{width:0;padding:0;border:none;background:transparent;color:var(--white);font-size:14px;transition:width var(--t),padding var(--t)}
+.search-box.open .search-input{width:180px;padding-right:10px}
+.search-input::placeholder{color:var(--gray)}
+.source-sel{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:var(--gray-l);font-size:11px;padding:5px 8px;border-radius:4px;cursor:pointer}
+.source-sel:hover{border-color:var(--white);color:var(--white)}
+.source-menu{display:none;position:absolute;top:100%;right:0;margin-top:4px;background:rgba(30,30,30,.97);border:1px solid rgba(255,255,255,.15);border-radius:6px;min-width:140px;z-index:200;overflow:hidden}
+.source-menu.show{display:block}
+.source-menu button{display:block;width:100%;text-align:left;padding:10px 16px;font-size:13px;color:var(--gray-l);transition:all var(--t)}
+.source-menu button:hover{background:rgba(255,255,255,.1);color:var(--white)}
+.source-menu button.active{color:var(--red);font-weight:600}
+
+.cat-bar{position:fixed;top:56px;left:0;right:0;z-index:90;padding:10px 16px;background:rgba(20,20,20,.95);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.06)}
+.cat-tags{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none}
+.cat-tags::-webkit-scrollbar{display:none}
+.tag{flex-shrink:0;padding:5px 12px;border-radius:20px;font-size:12px;background:rgba(255,255,255,.08);color:var(--gray-l);transition:all var(--t);white-space:nowrap}
+.tag:hover{background:rgba(255,255,255,.15);color:var(--white)}
+.tag.active{background:var(--white);color:#111;font-weight:600}
+
+.search-panel{position:fixed;top:0;left:0;right:0;bottom:0;z-index:95;background:rgba(20,20,20,.98);padding:76px 16px 20px;overflow-y:auto;display:none}
+.search-panel.show{display:block}
+.search-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.search-hd h3{font-size:18px}
+.close-search{font-size:30px;color:var(--gray-l);transition:color var(--t)}.close-search:hover{color:var(--white)}
+.search-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.no-result{text-align:center;padding:60px 0;color:var(--gray);font-size:16px}
+
+.hero{position:relative;width:100%;height:60vh;min-height:380px;display:flex;align-items:flex-end;padding:0 16px 80px}
+.hero-bg{position:absolute;inset:0;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460,#533483);transition:background .6s ease}
+.hero-gradient{position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,20,20,.3),transparent 35%,transparent 55%,var(--bg)),linear-gradient(90deg,rgba(20,20,20,.85),transparent 60%)}
+.hero-content{position:relative;z-index:2;max-width:100%}
+.hero-title{font-size:28px;font-weight:800;line-height:1.1;margin-bottom:10px}
+.hero-meta{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:13px}
+.match{color:#46d369;font-weight:600}
+.year,.duration{color:var(--gray-l)}
+.rating{padding:1px 6px;border:1px solid var(--gray);font-size:11px;color:var(--gray-l)}
+.hero-desc{font-size:13px;line-height:1.5;color:var(--gray-l);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:18px}
+.hero-btns{display:flex;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 20px;border-radius:var(--r);font-size:14px;font-weight:600;transition:all var(--t)}
+.btn-play{background:var(--white);color:#111}.btn-play:hover{background:rgba(255,255,255,.75)}
+.btn-info{background:rgba(109,109,110,.7);color:var(--white)}.btn-info:hover{background:rgba(109,109,110,.5)}
+
+.rows-wrap{padding:0 0 30px}
+.row{margin-bottom:30px}
+.row-title{font-size:17px;font-weight:700;padding:0 16px;margin-bottom:10px}
+.row-wrap{position:relative}
+.row-slider{display:flex;gap:6px;overflow-x:auto;scroll-behavior:smooth;padding:0 16px;scrollbar-width:none}
+.row-slider::-webkit-scrollbar{display:none}
+.sld-btn{display:none}
+
+.card{flex-shrink:0;width:120px;border-radius:var(--r);overflow:hidden;cursor:pointer;transition:transform .35s,box-shadow .35s;position:relative}
+.card:hover{transform:scale(1.05);z-index:5;box-shadow:0 4px 20px rgba(0,0,0,.6)}
+.card-img{width:100%;aspect-ratio:2/3;object-fit:cover;display:block;background:#222}
+.card-ov{position:absolute;inset:auto 0 0;padding:30px 6px 6px;background:linear-gradient(transparent,rgba(0,0,0,.9));opacity:1}
+.card-name{font-size:11px;font-weight:600;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-meta{font-size:10px;color:var(--gray-l)}
+.card-score{color:#46d369;font-weight:600;font-size:10px}
+
+.modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.7);display:none;align-items:flex-start;justify-content:center;padding:20px 10px;overflow-y:auto}
+.modal-overlay.show{display:flex}
+.modal{width:100%;max-width:100%;background:var(--bg2);border-radius:8px;overflow:hidden;position:relative;animation:mi .3s ease}
+@keyframes mi{from{opacity:0;transform:scale(.95) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal-close{position:absolute;top:10px;right:10px;z-index:10;width:32px;height:32px;border-radius:50%;background:rgba(30,30,30,.8);display:flex;align-items:center;justify-content:center;font-size:22px;transition:background var(--t)}
+.modal-close:hover{background:rgba(60,60,60,.9)}
+.modal-hero{position:relative;height:240px;background:#222;overflow:hidden}
+.modal-hero img{width:100%;height:100%;object-fit:cover}
+.modal-hero-g{position:absolute;inset:0;background:linear-gradient(transparent 30%,var(--bg2)),linear-gradient(90deg,rgba(26,26,26,.5),transparent 50%)}
+.modal-hero-c{position:absolute;bottom:0;left:0;right:0;padding:14px 18px}
+.modal-hero-c h2{font-size:22px;font-weight:800;margin-bottom:10px}
+.modal-btns{display:flex;gap:8px;align-items:center}
+.modal-btns .btn{padding:7px 18px;font-size:13px}
+.btn-icon{width:34px;height:34px;border-radius:50%;border:2px solid var(--gray);display:flex;align-items:center;justify-content:center;font-size:18px;transition:all var(--t)}
+.btn-icon:hover{border-color:var(--white)}
+.modal-body{padding:14px 18px}
+.modal-meta{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px}
+.modal-desc{font-size:13px;line-height:1.6;color:var(--gray-l)}
+.modal-side{font-size:12px;color:var(--gray-l);margin-top:12px}
+.modal-side p{margin-bottom:6px}
+.modal-side .lbl{color:var(--gray)}
+.modal-section{padding:0 18px 24px}
+.modal-section h3{font-size:17px;font-weight:700;margin-bottom:12px}
+.similar-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.sim-card{border-radius:var(--r);overflow:hidden;cursor:pointer;transition:transform var(--t);background:#222}
+.sim-card:hover{transform:scale(1.05)}
+.sim-card img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:#333}
+.sim-card-info{padding:6px}
+.sim-card-info h4{font-size:11px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sim-card-info p{font-size:10px;color:var(--gray)}
+
+/* ===== Player ===== */
+.play-overlay{position:fixed;inset:0;z-index:300;background:#000;display:none;flex-direction:column}
+.play-overlay.show{display:flex}
+.play-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(0,0,0,.85);flex-shrink:0;z-index:5;flex-wrap:wrap;gap:6px}
+.play-header-left{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+.play-back{display:flex;align-items:center;gap:4px;color:var(--gray-l);font-size:12px;transition:color var(--t)}
+.play-back:hover{color:var(--white)}
+.play-title{font-size:13px;font-weight:600;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.play-header-right{display:flex;align-items:center;gap:6px}
+.play-tool{display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:4px;font-size:11px;background:rgba(255,255,255,.1);color:var(--gray-l);transition:all var(--t)}
+.play-tool:hover{background:rgba(255,255,255,.2);color:var(--white)}
+.play-tool select{background:transparent;border:none;color:var(--white);font-size:11px;cursor:pointer;outline:none}
+.play-tool select option{background:#222;color:var(--white)}
+.play-body{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.play-video-area{flex:1;display:flex;flex-direction:column;background:#000;min-width:0;position:relative}
+.video-wrap{flex:1;display:flex;align-items:center;justify-content:center;position:relative;min-height:0;cursor:pointer}
+.video-wrap video{width:100%;height:100%;object-fit:contain;background:#000}
+.video-wrap .play-big{position:absolute;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.15);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;transition:all .2s;pointer-events:none;opacity:1}
+.video-wrap:hover .play-big{opacity:1}
+.video-wrap .play-big.hide{opacity:0!important}
+.play-big svg{width:28px;height:28px;margin-left:3px}
+
+/* Controls */
+.controls{height:40px;background:linear-gradient(transparent,rgba(0,0,0,.85));display:flex;align-items:center;padding:0 8px;gap:6px;flex-shrink:0;z-index:5}
+.ctl-btn{color:var(--white);display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:4px;transition:background .15s}
+.ctl-btn:hover{background:rgba(255,255,255,.15)}
+.progress-wrap{flex:1;display:flex;align-items:center;gap:6px;height:100%;cursor:pointer;position:relative}
+.progress-bar{flex:1;height:4px;background:rgba(255,255,255,.2);border-radius:2px;position:relative;transition:height .15s}
+.progress-wrap:hover .progress-bar{height:6px}
+.progress-buffered{position:absolute;left:0;top:0;height:100%;background:rgba(255,255,255,.25);border-radius:2px;pointer-events:none}
+.progress-played{position:absolute;left:0;top:0;height:100%;background:var(--red);border-radius:2px;pointer-events:none}
+.progress-thumb{position:absolute;top:50%;width:14px;height:14px;background:var(--red);border-radius:50%;transform:translate(-50%,-50%);opacity:0;transition:opacity .15s;pointer-events:none}
+.progress-wrap:hover .progress-thumb{opacity:1}
+.progress-hover-time{position:absolute;bottom:18px;background:rgba(0,0,0,.85);padding:3px 8px;border-radius:4px;font-size:11px;white-space:nowrap;pointer-events:none;display:none;transform:translateX(-50%)}
+.progress-wrap:hover .progress-hover-time{display:block}
+.ctl-time{font-size:11px;color:var(--gray-l);white-space:nowrap}
+.ctl-right{display:flex;align-items:center;gap:3px}
+.ctl-btn.fs-btn svg{width:18px;height:18px}
+
+/* Speed dropdown */
+.speed-dd{position:relative}
+.speed-menu{display:none;position:absolute;bottom:40px;right:0;background:rgba(20,20,20,.95);border:1px solid rgba(255,255,255,.12);border-radius:6px;overflow:hidden;min-width:70px;z-index:10}
+.speed-menu.show{display:block}
+.speed-menu button{display:block;width:100%;text-align:center;padding:7px 10px;font-size:11px;color:var(--gray-l);transition:all .15s}
+.speed-menu button:hover{background:rgba(255,255,255,.1);color:var(--white)}
+.speed-menu button.active{color:var(--red);font-weight:600}
+
+/* Sidebar */
+.play-sidebar{width:100%;height:200px;background:rgba(15,15,15,.98);border-top:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;flex-shrink:0}
+.play-sidebar-hd{padding:10px 14px;font-size:13px;font-weight:600;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0}
+.play-sidebar-list{flex:1;overflow-y:auto;padding:4px}
+.play-sidebar-list::-webkit-scrollbar{width:4px}
+.play-sidebar-list::-webkit-scrollbar-thumb{background:#444;border-radius:2px}
+.ep-item{display:inline-block;padding:7px 10px;border-radius:5px;font-size:12px;color:var(--gray-l);cursor:pointer;transition:all var(--t);margin:2px;white-space:nowrap}
+.ep-item:hover{background:rgba(255,255,255,.08);color:var(--white)}
+.ep-item.active{background:var(--red);color:var(--white);font-weight:600}
+
+.loading{display:flex;align-items:center;justify-content:center;padding:40px 0;gap:8px;color:var(--gray);font-size:13px}
+.spinner{width:20px;height:20px;border:3px solid rgba(255,255,255,.1);border-top-color:var(--red);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.net-status{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);padding:6px 16px;border-radius:20px;font-size:11px;z-index:500;display:none;white-space:nowrap}
+.net-status.show{display:block}
+.net-status.ok{background:rgba(70,211,105,.15);color:#46d369;border:1px solid rgba(70,211,105,.3)}
+.net-status.err{background:rgba(229,9,20,.15);color:#e50914;border:1px solid rgba(229,9,20,.3)}
+.net-status.warn{background:rgba(255,200,0,.15);color:#ffc800;border:1px solid rgba(255,200,0,.3)}
+
+.footer{padding:28px 16px;border-top:1px solid rgba(255,255,255,.06)}
+.footer-links{display:flex;flex-wrap:wrap;gap:10px 18px;margin-bottom:12px}
+.footer-links a{font-size:12px;color:var(--gray);transition:color var(--t)}.footer-links a:hover{color:var(--gray-l)}
+.footer-copy{font-size:11px;color:#555}
+
+@media(min-width:768px){
+  .navbar{padding:0 30px;height:60px}.cat-bar{padding:10px 30px;top:60px}
+  .hero{height:70vh;padding:0 30px 100px}.hero-title{font-size:36px}
+  .row-title{padding:0 30px;font-size:18px}.row-slider{padding:0 30px}
+  .card{width:150px}
+  .search-box.open .search-input{width:240px}
+  .search-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .play-sidebar{width:260px;height:auto;border-top:none;border-left:1px solid rgba(255,255,255,.06)}
+  .play-body{flex-direction:row}
+  .play-header{padding:10px 20px;flex-wrap:nowrap}
+  .play-title{max-width:300px;font-size:15px}
+  .controls{height:44px;padding:0 14px;gap:10px}
+  .ctl-time{font-size:12px}
+  .sld-btn{display:flex;position:absolute;top:0;bottom:0;width:50px;z-index:10;align-items:center;justify-content:center;background:rgba(20,20,20,.7);opacity:0;transition:opacity var(--t);font-size:28px;color:var(--white)}
+  .sld-btn:hover{background:rgba(20,20,20,.9)}
+  .row-wrap:hover .sld-btn{opacity:1}
+  .sld-btn.l{left:0}.sld-btn.r{right:0}
+  .card-ov{opacity:0;padding:40px 10px 10px}
+  .card:hover .card-ov{opacity:1}
+  .modal-hero{height:340px}
+  .modal-body{padding:20px 24px}
+  .modal-side{display:block}
+  .footer{padding:36px 30px}
+}
+</style>
+</head>
+<body>
+
+<nav class="navbar" id="navbar">
+  <div class="nav-left">
+    <div class="logo" onclick="goHome()">NETFLIX</div>
+  </div>
+  <div class="nav-right">
+    <div class="search-box" id="searchBox">
+      <button class="search-icon" id="searchBtn" aria-label="搜索">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      </button>
+      <input type="text" class="search-input" id="searchInput" placeholder="搜索影片名称...">
+    </div>
+    <div style="position:relative">
+      <button class="source-sel" id="sourceBtn">切换源 ▾</button>
+      <div class="source-menu" id="sourceMenu"></div>
+    </div>
+  </div>
+</nav>
+
+<div class="cat-bar" id="catBar">
+  <div class="cat-tags" id="catTags"><button class="tag active" data-cat="0">全部</button></div>
+</div>
+
+<div class="search-panel" id="searchPanel">
+  <div class="search-hd">
+    <h3 id="searchTitle">搜索结果</h3>
+    <button class="close-search" onclick="closeSearch()">&times;</button>
+  </div>
+  <div class="search-grid" id="searchGrid"></div>
+  <div class="no-result" id="noResult" style="display:none">没有找到相关内容</div>
+  <div class="loading" id="searchLoading" style="display:none"><div class="spinner"></div>搜索中...</div>
+</div>
+
+<div class="net-status" id="netStatus"></div>
+
+<main id="main">
+  <section class="hero" id="hero">
+    <div class="hero-bg" id="heroBg"></div>
+    <div class="hero-gradient"></div>
+    <div class="hero-content">
+      <h1 class="hero-title" id="heroTitle">加载中...</h1>
+      <div class="hero-meta">
+        <span class="match" id="heroMatch">--% 匹配</span>
+        <span class="year" id="heroYear">----</span>
+        <span class="rating" id="heroRating">--</span>
+        <span class="duration" id="heroDur"></span>
+      </div>
+      <p class="hero-desc" id="heroDesc">正在加载精彩内容...</p>
+      <div class="hero-btns">
+        <button class="btn btn-play" id="heroPlay">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>播放
+        </button>
+        <button class="btn btn-info" id="heroInfo">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>更多信息
+        </button>
+      </div>
+    </div>
+  </section>
+  <div class="rows-wrap" id="rowsWrap">
+    <div class="loading" id="mainLoading"><div class="spinner"></div>正在加载影片...</div>
+  </div>
+</main>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">&times;</button>
+    <div class="modal-hero"><img id="modalHeroImg" src="" alt=""><div class="modal-hero-g"></div>
+      <div class="modal-hero-c">
+        <h2 id="modalTitle"></h2>
+        <div class="modal-btns">
+          <button class="btn btn-play" id="modalPlayBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>播放</button>
+          <button class="btn btn-icon" title="收藏">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div>
+        <div class="modal-meta">
+          <span class="match" id="modalMatch">98% 匹配</span>
+          <span class="year" id="modalYear"></span>
+          <span class="rating" id="modalRating"></span>
+        </div>
+        <p class="modal-desc" id="modalDesc"></p>
+      </div>
+      <div class="modal-side">
+        <p><span class="lbl">类型：</span><span id="modalGenre"></span></p>
+        <p><span class="lbl">主演：</span><span id="modalCast"></span></p>
+        <p><span class="lbl">导演：</span><span id="modalDir"></span></p>
+        <p><span class="lbl">地区：</span><span id="modalArea"></span></p>
+      </div>
+    </div>
+    <div class="modal-section"><h3>类似内容</h3><div class="similar-grid" id="similarGrid"></div></div>
+  </div>
+</div>
+
+<!-- Player -->
+<div class="play-overlay" id="playOverlay">
+  <div class="play-header">
+    <div class="play-header-left">
+      <button class="play-back" onclick="closePlay()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>返回
+      </button>
+      <span class="play-title" id="playTitle"></span>
+      <div class="play-tool" id="playSourceWrap" style="display:none">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        <select id="playSourceSelect" onchange="switchPlaySource(+this.value)"></select>
+      </div>
+    </div>
+    <div class="play-header-right">
+      <button class="play-tool" onclick="downloadVideo()" title="下载">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        下载
+      </button>
+    </div>
+  </div>
+  <div class="play-body">
+    <div class="play-video-area">
+      <div class="video-wrap" id="videoWrap">
+        <video id="videoPlayer" playsinline preload="auto"></video>
+        <div class="play-big" id="playBig">
+          <svg viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </div>
+      </div>
+      <div class="controls">
+        <button class="ctl-btn" id="ctlPlay" onclick="togglePlay()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="white" id="ctlPlayIcon"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </button>
+        <button class="ctl-btn" onclick="skipEp(-1)" title="上一集">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+        </button>
+        <button class="ctl-btn" onclick="skipEp(1)" title="下一集">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M16 18h2V6h-2zM6 18l8.5-6L6 6z"/></svg>
+        </button>
+        <div class="progress-wrap" id="progressWrap">
+          <div class="progress-bar" id="progressBar">
+            <div class="progress-buffered" id="progressBuf"></div>
+            <div class="progress-played" id="progressPlayed"></div>
+            <div class="progress-thumb" id="progressThumb"></div>
+          </div>
+          <div class="progress-hover-time" id="hoverTime">00:00</div>
+        </div>
+        <span class="ctl-time" id="ctlTime">00:00 / 00:00</span>
+        <div class="ctl-right">
+          <div class="speed-dd">
+            <button class="ctl-btn" id="speedBtn" onclick="toggleSpeedMenu()" title="倍速" style="font-size:11px;font-weight:600;width:auto;padding:0 6px">1x</button>
+            <div class="speed-menu" id="speedMenu">
+              <button data-speed="0.5">0.5x</button>
+              <button data-speed="0.75">0.75x</button>
+              <button data-speed="1" class="active">1x</button>
+              <button data-speed="1.25">1.25x</button>
+              <button data-speed="1.5">1.5x</button>
+              <button data-speed="2">2x</button>
+              <button data-speed="3">3x</button>
+            </div>
+          </div>
+          <button class="ctl-btn" onclick="togglePip()" title="画中画">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="11" y="9" width="9" height="7" rx="1" fill="white" opacity=".3"/></svg>
+          </button>
+          <button class="ctl-btn fs-btn" onclick="toggleFull()" title="全屏">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="play-sidebar">
+      <div class="play-sidebar-hd" id="epHeader">选集</div>
+      <div class="play-sidebar-list" id="epList"></div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="footer-links">
+    <a href="#">帮助中心</a><a href="#">媒体中心</a><a href="#">使用条款</a>
+    <a href="#">隐私政策</a><a href="#">联系我们</a>
+  </div>
+  <p class="footer-copy">&copy; 2024 Netflix Clone — 仅供学习演示 · 影视数据来源于第三方聚合接口</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
+<script>
+/* ===== Config ===== */
+const SOURCE_LIST=[{id:'ffzy',name:'非凡资源',url:'https://api.ffzyapi.com/api.php/provide/vod'},{id:'lzy',name:'量子资源',url:'https://cj.lziapi.com/api.php/provide/vod'},{id:'ikun',name:'iKun资源',url:'https://ikunzyapi.com/api.php/provide/vod'}];
+const SOURCES={};SOURCE_LIST.forEach(s=>SOURCES[s.id]=s);
+let currentSource='ffzy',allCategories=[],currentCat=0,isLoading=false;
+let hlsInst=null,allPlaySources=[],currentSourceIdx=0,currentEpisodes=[],currentEpIndex=0,currentVodName='';
+
+/* ===== Network ===== */
+let hasServer=false;
+// 多个 CORS 代理备选
+const CORS_FALLBACKS=[
+  u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),
+  u=>'https://corsproxy.io/?'+encodeURIComponent(u),
+  u=>'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(u),
+  u=>'https://thingproxy.freeboard.io/fetch/'+encodeURIComponent(u),
+];
+
+function showStatus(msg,type){const el=document.getElementById('netStatus');el.textContent=msg;el.className='net-status show '+type;clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),4000)}
+
+async function detectServer(){
+  try{const r=await fetch('/api/config',{signal:AbortSignal.timeout(2000)});if(r.ok){const d=await r.json();if(Array.isArray(d)&&d.length){
+    hasServer=true;
+    const menu=document.getElementById('sourceMenu');
+    SOURCES={};d.forEach(s=>SOURCES[s.id]=s);
+    if(!SOURCES[currentSource])currentSource=d[0].id;
+    menu.innerHTML=d.map(s=>'<button data-src="'+s.id+'"'+(s.id===currentSource?' class="active"':'')+'>'+s.name+'</button>').join('');
+    menu.querySelectorAll('button').forEach(b=>{b.addEventListener('click',()=>switchSource(b.dataset.src))});
+    showStatus('已连接本地服务器','ok');
+  }}}catch(e){}
+}
+
+async function apiFetch(params){
+  const qs=new URLSearchParams(params).toString();
+  // 1. 本地服务器（局域网模式）
+  if(hasServer){
+    try{
+      const c=new AbortController(),t=setTimeout(()=>c.abort(),8e3);
+      const r=await fetch('/api/'+currentSource+'?'+qs,{signal:c.signal});
+      clearTimeout(t);if(!r.ok)return null;return await r.json();
+    }catch(e){return null}
+  }
+  const base=SOURCES[currentSource].url;
+  const full=base+'?'+qs;
+  // 2. HTTPS 直连（首选）
+  try{const c=new AbortController(),t=setTimeout(()=>c.abort(),8e3);const r=await fetch(full,{signal:c.signal});clearTimeout(t);if(r.ok){const d=await r.json();if(d?.list){showStatus('直连成功','ok');return d}}}catch(e){}
+  // 3. CORS 代理备选
+  for(const f of CORS_FALLBACKS){
+    try{
+      const c=new AbortController(),t=setTimeout(()=>c.abort(),8e3);
+      const r=await fetch(f(full),{signal:c.signal});
+      clearTimeout(t);if(!r.ok)continue;
+      const ct=r.headers.get('content-type')||'';
+      if(ct.includes('html'))continue;
+      const d=await r.json();if(d?.list){showStatus('代理连接成功','ok');return d}
+    }catch(e){continue}
+  }
+  showStatus('所有连接方式均失败','err');
+  return null;
+}
+
+/* ===== Categories ===== */
+function renderCategories(cats){const el=document.getElementById('catTags');el.innerHTML='<button class="tag active" data-cat="0">全部</button>';cats.forEach(c=>{el.innerHTML+='<button class="tag" data-cat="'+c.id+'">'+c.name+'</button>'});el.querySelectorAll('.tag').forEach(b=>{b.addEventListener('click',()=>{el.querySelectorAll('.tag').forEach(x=>x.classList.remove('active'));b.classList.add('active');currentCat=parseInt(b.dataset.cat);loadMainContent()})})}
+async function loadCategories(){const d=await apiFetch({ac:'list',pg:'1',limit:'100'});if(!d?.list)return;const s=new Map();d.list.forEach(v=>{if(!s.has(v.type_id))s.set(v.type_id,v.type_name)});allCategories=Array.from(s,([id,name])=>({id,name}));renderCategories(allCategories)}
+
+/* ===== Cards ===== */
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function cardHTML(v){const p=v.vod_pic||'',n=esc(v.vod_name||'未知'),rm=esc(v.vod_remarks||''),y=v.vod_year||'',sc=v.vod_score&&v.vod_score!=='0.0'?v.vod_score+'分':'',img=p?'<img class="card-img" src="'+esc(p)+'" alt="'+n+'" loading="lazy" onerror="imgErr(this)">':'';return'<div class="card" data-id="'+v.vod_id+'">'+img+'<div class="card-ov"><div class="card-name">'+n+'</div><div class="card-meta">'+[y,rm].filter(Boolean).join(' · ')+'</div>'+(sc?'<div class="card-score">'+sc+'</div>':'')+'</div></div>'}
+function rowHTML(t,v,id){if(!v?.length)return'';return'<div class="row" id="'+id+'"><div class="row-title">'+t+'</div><div class="row-wrap"><button class="sld-btn l" onclick="scrollRow(this,-1)">‹</button><div class="row-slider">'+v.map(cardHTML).join('')+'</div><button class="sld-btn r" onclick="scrollRow(this,1)">›</button></div></div>'}
+function scrollRow(b,d){b.parentElement.querySelector('.row-slider').scrollBy({left:d*600,behavior:'smooth'})}
+function imgErr(el){if(el.dataset.retried)return;el.dataset.retried='1';const src=el.src;if(src.startsWith('https://')){el.src=src.replace('https://','http://')}else if(src.startsWith('http://')){el.src=src.replace('http://','https://')}else{el.style.display='none'}}
+
+/* ===== Main Content ===== */
+async function loadMainContent(){if(isLoading)return;isLoading=true;const w=document.getElementById('rowsWrap');w.innerHTML='<div class="loading"><div class="spinner"></div>正在加载影片...</div>';const data=await apiFetch({ac:'detail',pg:'1',limit:'40'});if(!data?.list?.length){w.innerHTML='<div class="loading" style="color:var(--gray)">加载失败，请尝试切换其他源</div>';isLoading=false;return}const v=data.list;if(!currentCat)updateHero(v[0]);let h=rowHTML('最新更新',v.slice(0,14),'r0');if(!currentCat){const[m,t,a]=await Promise.all([apiFetch({ac:'detail',pg:'1',limit:'14',t:'6'}),apiFetch({ac:'detail',pg:'1',limit:'14',t:'13'}),apiFetch({ac:'detail',pg:'1',limit:'14',t:'30'})]);if(m?.list?.length)h+=rowHTML('动作电影',m.list,'r1');if(t?.list?.length)h+=rowHTML('国产剧集',t.list,'r2');if(a?.list?.length)h+=rowHTML('热门动漫',a.list,'r3');const more=[11,12,14,15,8,9].sort(()=>Math.random()-.5).slice(0,3),md=await Promise.all(more.map(t=>apiFetch({ac:'detail',pg:'1',limit:'14',t:String(t)})));md.forEach((d,i)=>{if(d?.list?.length)h+=rowHTML(d.list[0].type_name||'推荐',d.list,'r'+(4+i))})}else{const d2=await apiFetch({ac:'detail',pg:'2',limit:'40',t:String(currentCat)});if(d2?.list?.length)h+=rowHTML('更多',d2.list,'r4')}w.innerHTML=h;w.querySelectorAll('.card').forEach(c=>{c.addEventListener('click',()=>{const id=c.dataset.id,vod=v.find(x=>String(x.vod_id)===id)||{vod_id:id,vod_name:c.querySelector('.card-name')?.textContent};showDetail(vod)})});isLoading=false}
+
+/* ===== Hero ===== */
+function updateHero(v){if(!v)return;document.getElementById('heroTitle').textContent=v.vod_name;const sc=v.vod_score&&v.vod_score!=='0.0'?Math.round(parseFloat(v.vod_score)*10)+'% 匹配':(85+Math.floor(Math.random()*15))+'% 匹配';document.getElementById('heroMatch').textContent=sc;document.getElementById('heroYear').textContent=v.vod_year||'';document.getElementById('heroRating').textContent=v.vod_remarks||'';document.getElementById('heroDur').textContent=v.vod_area||'';const desc=(v.vod_blurb||v.vod_content||'').replace(/<[^>]+>/g,'').replace(/&amp;nbsp;|&nbsp;/g,'').trim();document.getElementById('heroDesc').textContent=desc||'暂无简介';if(v.vod_pic)document.getElementById('heroBg').style.background='url("'+v.vod_pic+'") center/cover';document.getElementById('heroPlay').onclick=()=>loadAndPlay(v);document.getElementById('heroInfo').onclick=()=>showDetail(v)}
+
+/* ===== Detail Modal ===== */
+async function showDetail(vod){document.getElementById('modalTitle').textContent=vod.vod_name;document.getElementById('modalHeroImg').src=vod.vod_pic||'';document.getElementById('modalYear').textContent=vod.vod_year||'';document.getElementById('modalRating').textContent=vod.vod_remarks||'';const desc=(vod.vod_blurb||vod.vod_content||'').replace(/<[^>]+>/g,'').replace(/&amp;nbsp;|&nbsp;/g,'').trim();document.getElementById('modalDesc').textContent=desc||'暂无简介';document.getElementById('modalGenre').textContent=vod.vod_class||vod.type_name||'未知';document.getElementById('modalCast').textContent=(vod.vod_actor||'未知').split(',').slice(0,4).join(', ');document.getElementById('modalDir').textContent=vod.vod_director||'未知';document.getElementById('modalArea').textContent=vod.vod_area||'未知';const sc=vod.vod_score&&vod.vod_score!=='0.0'?Math.round(parseFloat(vod.vod_score)*10)+'% 匹配':(85+Math.floor(Math.random()*15))+'% 匹配';document.getElementById('modalMatch').textContent=sc;const detail=await apiFetch({ac:'detail',ids:String(vod.vod_id)}),full=detail?.list?.[0]||vod;document.getElementById('modalPlayBtn').onclick=()=>{closeModal();playVod(full)};const typeId=full.type_id||vod.type_id,sim=await apiFetch({ac:'detail',pg:'1',limit:'8',t:String(typeId)}),sg=document.getElementById('similarGrid');if(sim?.list){sg.innerHTML=sim.list.filter(x=>x.vod_id!==vod.vod_id).slice(0,6).map(x=>'<div class="sim-card" data-id="'+x.vod_id+'"><img src="'+(x.vod_pic||'')+'" alt="'+esc(x.vod_name)+'" loading="lazy"><div class="sim-card-info"><h4>'+esc(x.vod_name)+'</h4><p>'+esc(x.vod_remarks||'')+'</p></div></div>').join('');sg.querySelectorAll('.sim-card').forEach(c=>{c.addEventListener('click',()=>{const sv=sim.list.find(x=>String(x.vod_id)===c.dataset.id);if(sv){closeModal();setTimeout(()=>showDetail(sv),200)}})})}document.getElementById('modalOverlay').classList.add('show');document.body.style.overflow='hidden'}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('show');document.body.style.overflow=''}
+async function loadAndPlay(vod){const d=await apiFetch({ac:'detail',ids:String(vod.vod_id)});playVod(d?.list?.[0]||vod)}
+
+/* ===== Parse Episodes ===== */
+function parseEpisodes(vod){const urls=(vod.vod_play_url||'').split('$$$'),froms=(vod.vod_play_from||'').split('$$$');allPlaySources=[];for(let i=0;i<urls.length;i++){const parts=urls[i].split('#'),eps=parts.map(p=>{const idx=p.indexOf('$');return idx===-1?{name:'播放',url:p}:{name:p.substring(0,idx),url:p.substring(idx+1)}}).filter(e=>e.url);if(eps.length){allPlaySources.push({eps,from:froms[i]||'源'+(i+1),hasM3u8:eps.some(e=>e.url.includes('.m3u8'))})}}allPlaySources.sort((a,b)=>(b.hasM3u8?1:0)-(a.hasM3u8?1:0));currentSourceIdx=0;return allPlaySources[0]?.eps||[]}
+
+/* ===== Player ===== */
+function playVod(vod){if(!vod.vod_play_url){alert('暂无播放源');return}currentVodName=vod.vod_name||'';currentEpisodes=parseEpisodes(vod);if(!currentEpisodes.length){alert('暂无可用播放链接');return}document.getElementById('playTitle').textContent=currentVodName;document.getElementById('epHeader').textContent='选集 (共'+currentEpisodes.length+'集)';const sw=document.getElementById('playSourceWrap'),ss=document.getElementById('playSourceSelect');if(allPlaySources.length>1){sw.style.display='';ss.innerHTML=allPlaySources.map((s,i)=>'<option value="'+i+'"'+(i===currentSourceIdx?' selected':'')+'>'+esc(s.from)+(s.hasM3u8?' ✓':'')+'</option>').join('')}else{sw.style.display='none'}const el=document.getElementById('epList');el.innerHTML=currentEpisodes.map((ep,i)=>'<div class="ep-item'+(i===0?' active':'')+'" data-idx="'+i+'">'+esc(ep.name)+'</div>').join('');el.querySelectorAll('.ep-item').forEach(x=>{x.addEventListener('click',()=>playEp(+x.dataset.idx))});document.getElementById('playOverlay').classList.add('show');document.body.style.overflow='hidden';playEp(0)}
+
+function resetProgressUI(){document.getElementById('progressPlayed').style.width='0%';document.getElementById('progressThumb').style.left='0%';document.getElementById('progressBuf').style.width='0%';document.getElementById('ctlTime').textContent='00:00 / 00:00';document.getElementById('playBig').classList.remove('hide');document.getElementById('ctlPlayIcon').innerHTML='<polygon points="5 3 19 12 5 21 5 3"/>'}
+
+function playEp(idx){currentEpIndex=idx;const ep=currentEpisodes[idx];if(!ep)return;document.querySelectorAll('.ep-item').forEach((x,i)=>x.classList.toggle('active',i===idx));const ac=document.querySelector('.ep-item.active');if(ac)ac.scrollIntoView({behavior:'smooth',block:'nearest'});stopProgressLoop();resetProgressUI();destroyHls();const isM3u8=ep.url.includes('.m3u8');if(!isM3u8&&!ep.url.includes('.mp4')){document.getElementById('videoWrap').innerHTML='<iframe src="'+esc(ep.url)+'" style="width:100%;height:100%;border:none" allowfullscreen></iframe><div class="play-big" id="playBig" style="display:none"></div>';return}const wrap=document.getElementById('videoWrap');if(!wrap.querySelector('video')){wrap.innerHTML='<video id="videoPlayer" playsinline preload="auto"></video><div class="play-big" id="playBig"><svg viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>';bindVideoListeners()}const vid=document.getElementById('videoPlayer');vid.pause();vid.removeAttribute('src');vid.load();if(isM3u8&&Hls.isSupported()){hlsInst=new Hls({maxBufferLength:30});hlsInst.loadSource(ep.url);hlsInst.attachMedia(vid);let retry=0;hlsInst.on(Hls.Events.ERROR,(e,d)=>{if(d.fatal){if(d.type===Hls.ErrorTypes.NETWORK_ERROR&&retry<3){retry++;hlsInst.startLoad()}else if(d.type===Hls.ErrorTypes.MEDIA_ERROR&&retry<3){retry++;hlsInst.recoverMediaError()}else{destroyHls();tryNextSource()}}});hlsInst.on(Hls.Events.MANIFEST_PARSED,()=>{vid.play().catch(()=>{})})}else if(vid.canPlayType('application/vnd.apple.mpegurl')){vid.src=ep.url;vid.addEventListener('loadedmetadata',()=>vid.play().catch(()=>{}),{once:true})}else{vid.src=ep.url;vid.play().catch(()=>{})}const sp=parseFloat(localStorage.getItem('playSpeed')||'1');if(sp!==1){vid.playbackRate=sp;document.getElementById('speedBtn').textContent=sp+'x'}updateSpeedMenu(sp);startProgressLoop()}
+
+function tryNextSource(){if(allPlaySources.length>1&&currentSourceIdx<allPlaySources.length-1){currentSourceIdx++;currentEpisodes=allPlaySources[currentSourceIdx].eps;document.getElementById('epHeader').textContent='选集 (共'+currentEpisodes.length+'集)';const el=document.getElementById('epList');el.innerHTML=currentEpisodes.map((ep,i)=>'<div class="ep-item'+(i===0?' active':'')+'" data-idx="'+i+'">'+esc(ep.name)+'</div>').join('');el.querySelectorAll('.ep-item').forEach(x=>{x.addEventListener('click',()=>playEp(+x.dataset.idx))});document.getElementById('playSourceSelect').value=currentSourceIdx;playEp(0)}}
+
+function switchPlaySource(idx){currentSourceIdx=idx;currentEpisodes=allPlaySources[idx].eps;document.getElementById('epHeader').textContent='选集 (共'+currentEpisodes.length+'集)';const el=document.getElementById('epList');el.innerHTML=currentEpisodes.map((ep,i)=>'<div class="ep-item'+(i===0?' active':'')+'" data-idx="'+i+'">'+esc(ep.name)+'</div>').join('');el.querySelectorAll('.ep-item').forEach(x=>{x.addEventListener('click',()=>playEp(+x.dataset.idx))});playEp(0)}
+
+function destroyHls(){if(hlsInst){hlsInst.destroy();hlsInst=null}}
+
+/* ===== Video Controls ===== */
+function bindVideoEvents(){const wrap=document.getElementById('videoWrap');if(wrap.dataset.bound)return;wrap.dataset.bound='1';const pw=document.getElementById('progressWrap'),ht=document.getElementById('hoverTime');function gv(){return document.getElementById('videoPlayer')}let dragging=false;function seek(e){const v=gv();if(!v||!v.duration)return;const cx=e.touches?e.touches[0].clientX:e.clientX;const r=pw.getBoundingClientRect(),x=Math.max(0,Math.min(1,(cx-r.left)/r.width));v.currentTime=x*v.duration;syncProgress()}wrap.addEventListener('click',e=>{if(e.target===wrap||e.target===gv())togglePlay()});pw.addEventListener('click',e=>{const v=gv();if(!v||!v.duration)return;const r=pw.getBoundingClientRect(),x=(e.clientX-r.left)/r.width;v.currentTime=x*v.duration;syncProgress()});pw.addEventListener('mousemove',e=>{const v=gv();if(!v||!v.duration)return;const r=pw.getBoundingClientRect(),x=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));ht.textContent=fmt(x*v.duration);ht.style.left=e.clientX-r.left+'px'});pw.addEventListener('mousedown',e=>{dragging=true;seek(e)});pw.addEventListener('touchstart',e=>{dragging=true;seek(e)},{passive:true});document.addEventListener('mousemove',e=>{if(dragging)seek(e)});document.addEventListener('touchmove',e=>{if(dragging)seek(e)},{passive:true});document.addEventListener('mouseup',()=>{dragging=false});document.addEventListener('touchend',()=>{dragging=false})}
+
+let progressRAF=null;
+function syncProgress(){
+  const v=document.getElementById('videoPlayer');
+  if(!v)return;
+  const d=v.duration,t=v.currentTime;
+  if(!d||isNaN(d)||isNaN(t))return;
+  const p=t/d*100;
+  document.getElementById('progressPlayed').style.width=p+'%';
+  document.getElementById('progressThumb').style.left=p+'%';
+  document.getElementById('ctlTime').textContent=fmt(t)+' / '+fmt(d);
+  if(v.buffered.length){document.getElementById('progressBuf').style.width=v.buffered.end(v.buffered.length-1)/d*100+'%'}
+}
+function startProgressLoop(){
+  stopProgressLoop();
+  function loop(){
+    const v=document.getElementById('videoPlayer');
+    if(v&&!v.paused&&!v.ended){syncProgress()}
+    progressRAF=requestAnimationFrame(loop);
+  }
+  progressRAF=requestAnimationFrame(loop);
+}
+function stopProgressLoop(){if(progressRAF){cancelAnimationFrame(progressRAF);progressRAF=null}}
+function bindVideoListeners(){const v=document.getElementById('videoPlayer');if(!v||v.dataset.evBound)return;v.dataset.evBound='1';const bi=document.getElementById('playBig');v.addEventListener('play',()=>{document.getElementById('ctlPlayIcon').innerHTML='<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';bi.classList.add('hide');startProgressLoop()});v.addEventListener('playing',()=>{startProgressLoop()});v.addEventListener('loadeddata',()=>{syncProgress();if(!v.paused)startProgressLoop()});v.addEventListener('timeupdate',()=>{syncProgress()});v.addEventListener('pause',()=>{document.getElementById('ctlPlayIcon').innerHTML='<polygon points="5 3 19 12 5 21 5 3"/>';bi.classList.remove('hide')});v.addEventListener('ended',()=>{stopProgressLoop();if(currentEpIndex<currentEpisodes.length-1)playEp(currentEpIndex+1)});v.addEventListener('dblclick',toggleFull)}
+
+function togglePlay(){const v=document.getElementById('videoPlayer');if(!v)return;v.paused?v.play():v.pause()}
+function skipEp(d){const n=currentEpIndex+d;if(n>=0&&n<currentEpisodes.length)playEp(n)}
+function toggleFull(){const el=document.querySelector('.play-video-area');if(document.fullscreenElement)document.exitFullscreen();else el.requestFullscreen?.()}
+function togglePip(){const v=document.getElementById('videoPlayer');if(!v)return;if(document.pictureInPictureElement)document.exitPictureInPicture();else v.requestPictureInPicture?.().catch(()=>{})}
+function downloadVideo(){const ep=currentEpisodes[currentEpIndex];if(!ep)return;const a=document.createElement('a');a.href=ep.url;a.download=currentVodName+'_'+ep.name;a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();document.body.removeChild(a)}
+function fmt(s){if(!s||isNaN(s))return'00:00';const m=Math.floor(s/60),sec=Math.floor(s%60);return(m<10?'0':'')+m+':'+(sec<10?'0':'')+sec}
+
+function toggleSpeedMenu(){document.getElementById('speedMenu').classList.toggle('show')}
+function updateSpeedMenu(v){document.querySelectorAll('#speedMenu button').forEach(b=>b.classList.toggle('active',parseFloat(b.dataset.speed)===v))}
+document.querySelectorAll('#speedMenu button').forEach(b=>{b.addEventListener('click',()=>{const s=parseFloat(b.dataset.speed),v=document.getElementById('videoPlayer');if(v)v.playbackRate=s;document.getElementById('speedBtn').textContent=s+'x';localStorage.setItem('playSpeed',String(s));updateSpeedMenu(s);document.getElementById('speedMenu').classList.remove('show')})});
+document.addEventListener('click',e=>{if(!e.target.closest('.speed-dd'))document.getElementById('speedMenu')?.classList.remove('show')});
+
+function closePlay(){stopProgressLoop();destroyHls();const wrap=document.getElementById('videoWrap');wrap.innerHTML='<video id="videoPlayer" playsinline preload="auto"></video><div class="play-big" id="playBig"><svg viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>';resetProgressUI();document.getElementById('speedBtn').textContent='1x';updateSpeedMenu(1);document.getElementById('playOverlay').classList.remove('show');document.body.style.overflow='';if(document.fullscreenElement)document.exitFullscreen();currentEpisodes=[];currentEpIndex=0}
+
+/* ===== Search ===== */
+let searchTimer=null;
+function doSearch(kw){if(!kw.trim())return;const p=document.getElementById('searchPanel'),g=document.getElementById('searchGrid'),nr=document.getElementById('noResult'),ld=document.getElementById('searchLoading');p.classList.add('show');document.getElementById('main').style.display='none';g.innerHTML='';nr.style.display='none';ld.style.display='flex';document.getElementById('searchTitle').textContent='搜索"'+kw+'"';clearTimeout(searchTimer);searchTimer=setTimeout(async()=>{const d=await apiFetch({ac:'detail',pg:'1',limit:'30',wd:kw});ld.style.display='none';if(d?.list?.length){g.innerHTML=d.list.map(cardHTML).join('');g.querySelectorAll('.card').forEach(c=>{c.addEventListener('click',()=>{const id=c.dataset.id,vod=d.list.find(v=>String(v.vod_id)===id);if(vod)showDetail(vod)})})}else{nr.style.display='block'}},300)}
+function closeSearch(){document.getElementById('searchPanel').classList.remove('show');document.getElementById('main').style.display='';document.getElementById('searchInput').value=''}
+
+/* ===== Nav ===== */
+function switchSource(s){currentSource=s;document.getElementById('sourceMenu').classList.remove('show');document.getElementById('sourceMenu').querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.src===s));loadCategories();loadMainContent()}
+function goHome(){closeSearch();currentCat=0;document.querySelectorAll('.cat-tags .tag').forEach(t=>t.classList.toggle('active',t.dataset.cat==='0'));loadMainContent();window.scrollTo({top:0,behavior:'smooth'})}
+
+/* ===== Events ===== */
+window.addEventListener('scroll',()=>document.getElementById('navbar').classList.toggle('solid',scrollY>50));
+document.getElementById('searchBtn').addEventListener('click',()=>{const b=document.getElementById('searchBox'),i=document.getElementById('searchInput');if(!b.classList.contains('open')){b.classList.add('open');i.focus()}else if(i.value.trim())doSearch(i.value)});
+document.getElementById('searchInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.value.trim())doSearch(e.target.value)});
+document.getElementById('sourceBtn').addEventListener('click',e=>{e.stopPropagation();document.getElementById('sourceMenu').classList.toggle('show')});
+document.addEventListener('click',e=>{if(!e.target.closest('.source-sel')&&!e.target.closest('.source-menu'))document.getElementById('sourceMenu').classList.remove('show')});
+document.getElementById('modalOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('modalOverlay'))closeModal()});
+document.addEventListener('keydown',e=>{if(document.getElementById('playOverlay').classList.contains('show')){if(e.key===' '&&e.target===document.body){e.preventDefault();togglePlay()}else if(e.key==='ArrowRight'){const v=document.getElementById('videoPlayer');if(v)v.currentTime=Math.min(v.duration,v.currentTime+5)}else if(e.key==='ArrowLeft'){const v=document.getElementById('videoPlayer');if(v)v.currentTime=Math.max(0,v.currentTime-5)}else if(e.key==='Escape')closePlay()}else if(e.key==='Escape'){if(document.getElementById('modalOverlay').classList.contains('show'))closeModal();else closeSearch()}});
+document.addEventListener('fullscreenchange',()=>{const v=document.getElementById('videoPlayer');if(v&&!document.fullscreenElement)v.style.objectFit='contain'});
+
+/* ===== Init ===== */
+function buildSourceMenu(){const m=document.getElementById('sourceMenu');m.innerHTML=SOURCE_LIST.map(s=>'<button data-src="'+s.id+'"'+(s.id===currentSource?' class="active"':'')+'>'+s.name+'</button>').join('');m.querySelectorAll('button').forEach(b=>{b.addEventListener('click',()=>switchSource(b.dataset.src))})}
+bindVideoEvents();
+buildSourceMenu();
+(async()=>{await detectServer();await loadCategories();await loadMainContent()})();
+</script>
+</body>
+</html>
